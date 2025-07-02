@@ -10,6 +10,8 @@ interface FileUploadProps {
 export default function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
 
+  const BACKEND_URL = process.env.BACKEND_URL;
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -20,7 +22,7 @@ export default function FileUpload({ onUploadSuccess, onUploadError }: FileUploa
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch(`${BACKEND_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });

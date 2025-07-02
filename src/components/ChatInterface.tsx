@@ -13,6 +13,8 @@ export default function ChatInterface() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const BACKEND_URL = process.env.BACKEND_URL;
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -28,7 +30,7 @@ export default function ChatInterface() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
