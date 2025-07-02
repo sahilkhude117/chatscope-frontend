@@ -2,7 +2,26 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SendHorizontal } from 'lucide-react';
+import { SendHorizontal, Bot, User, CornerDownLeft } from 'lucide-react';
+import { cn } from "@/lib/utils"; // Assuming you have a utility for merging Tailwind classes
+
+// --- Magic UI Components (or similar implementations) ---
+
+// A subtle animated background pattern
+const DotPattern = () => (
+  <div className="absolute inset-0 h-full w-full bg-transparent bg-[radial-gradient(#2d3748,transparent_1px)] [background-size:16px_16px]" />
+);
+
+// A card that has a glowing effect
+const MagicCard = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={cn("relative overflow-hidden rounded-2xl border border-gray-700 bg-gray-800/80 p-4 shadow-2xl backdrop-blur-sm", className)}>
+    <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_farthest-side_at_50%_50%,rgba(34,197,94,0.15),rgba(255,255,255,0))]"></div>
+    {children}
+  </div>
+);
+
+
+// --- Main Chat Interface Component ---
 
 interface Message {
   role: 'user' | 'assistant';
@@ -23,65 +42,53 @@ export default function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, loading]);
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 128)}px`;
     }
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
+  const handleSendMessage = async (content: string) => {
+    if (loading) return;
 
     const userMessage: Message = {
       role: 'user',
-      content: input,
+      content,
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
     setLoading(true);
 
     // Reset textarea height
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = 'auto';
     }
 
     try {
       const response = await fetch(`/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: input }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: data.response,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        const errorMessage: Message = {
-          role: 'assistant',
-          content: data.error || 'Something went wrong',
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      }
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.response || data.error || 'An unexpected error occurred.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+
     } catch (error) {
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Network error occurred',
+        content: 'Network error. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -90,225 +97,177 @@ export default function ChatInterface() {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    handleSendMessage(input);
+    setInput('');
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(e);
+      handleSubmit(e);
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-black">
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+    <div className="flex h-full flex-col bg-gray-900 text-white relative">
+      <DotPattern />
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 z-10">
         <AnimatePresence>
           {messages.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center h-full text-center space-y-6"
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-white">Ready to chat!</h3>
-                <p className="text-gray-400 max-w-md">
-                  Your PDF has been processed. Ask me anything about the document and I'll help you find the answers.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl">
-                {[
-                  "What is this document about?",
-                  "Summarize the key points",
-                  "What are the main conclusions?",
-                  "Find specific information..."
-                ].map((suggestion, index) => (
-                  <motion.button
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    onClick={() => setInput(suggestion)}
-                    className="p-3 text-left text-sm text-gray-300 bg-gray-900/50 hover:bg-gray-800/50 border border-gray-700 hover:border-green-400/30 rounded-lg transition-all duration-200"
-                  >
-                    {suggestion}
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
+            <WelcomeScreen setInput={setInput} />
           ) : (
-            <>
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <div className={`flex space-x-3 max-w-4xl ${
-                    message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-                  }`}>
-                    {/* Avatar */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-blue-600' 
-                        : 'bg-gradient-to-br from-green-400 to-emerald-600'
-                    }`}>
-                      {message.role === 'user' ? (
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-
-                    {/* Message Content */}
-                    <div className={`flex flex-col space-y-2 ${
-                      message.role === 'user' ? 'items-end' : 'items-start'
-                    }`}>
-                      <div
-                        className={`px-4 py-3 rounded-2xl max-w-2xl ${
-                          message.role === 'user'
-                            ? 'bg-blue-600 text-white rounded-br-md'
-                            : 'bg-gray-800 text-gray-100 border border-gray-700 rounded-bl-md'
-                        }`}
-                      >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {message.content}
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-500 px-2">
-                        {message.timestamp.toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-
-              {loading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start"
-                >
-                  <div className="flex space-x-3 max-w-4xl">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="bg-gray-800 text-gray-100 border border-gray-700 px-4 py-3 rounded-2xl rounded-bl-md">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex space-x-1">
-                          {[0, 1, 2].map((i) => (
-                            <motion.div
-                              key={i}
-                              className="w-2 h-2 bg-green-400 rounded-full"
-                              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                              transition={{
-                                duration: 1.5,
-                                repeat: Infinity,
-                                delay: i * 0.2,
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-gray-300">Thinking...</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </>
+            messages.map((msg, index) => (
+              <ChatMessage key={index} message={msg} />
+            ))
           )}
         </AnimatePresence>
+
+        {loading && <LoadingIndicator />}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <div className="border-t border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-        <form onSubmit={sendMessage} className="p-4">
-          <div className="flex items-end space-x-3 max-w-4xl mx-auto">
-            <div className="flex-1 relative">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  adjustTextareaHeight();
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask a question about your PDF..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none min-h-[48px] max-h-[120px]"
-                disabled={loading}
-                rows={1}
-              />
-              
-              {/* Character count or other indicators can go here */}
-              {input.length > 0 && (
+      <div className="border-t border-gray-700/60 bg-gray-900/50 backdrop-blur-lg p-4 z-10">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex items-end gap-3">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              adjustTextareaHeight();
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask me anything about your document..."
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+            disabled={loading}
+            rows={1}
+          />
+          <motion.button
+            type="submit"
+            disabled={loading || !input.trim()}
+            className="w-12 h-12 rounded-xl flex items-center justify-center bg-green-500 text-white disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition-all"
+            whileHover={{ scale: 1.1, backgroundColor: '#22c55e' }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {loading ? (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="absolute right-3 top-3"
-                >
-                  <div className="w-6 h-6 bg-green-400/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-green-400 font-medium">
-                      {input.length > 100 ? '!' : '✓'}
-                    </span>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
-            <motion.button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 ${
-                loading || !input.trim()
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-green-400 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-700 shadow-lg hover:shadow-green-400/25'
-              }`}
-              whileHover={!loading && input.trim() ? { scale: 1.05 } : {}}
-              whileTap={!loading && input.trim() ? { scale: 0.95 } : {}}
-            >
-              {loading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full"
                 />
-              ) : (
-                <SendHorizontal />
-              )}
-            </motion.button>
-          </div>
-
-          {/* Input hints */}
-          <div className="flex items-center justify-between mt-3 px-1 text-xs text-gray-500">
-            <div className="flex items-center space-x-4">
-              <span>Press Enter to send, Shift+Enter for new line</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span>AI Ready</span>
-              </div>
-            </div>
-          </div>
+            ) : (
+              <SendHorizontal size={24} />
+            )}
+          </motion.button>
         </form>
+        <p className="text-xs text-gray-500 mt-2 text-center flex items-center justify-center gap-2">
+            <CornerDownLeft size={12} /> Press Enter to send, <kbd className="font-sans">Shift + Enter</kbd> for a new line.
+        </p>
       </div>
     </div>
   );
 }
+
+// --- Sub-components for a cleaner structure ---
+
+const WelcomeScreen = ({ setInput }: { setInput: (value: string) => void }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex flex-col items-center justify-center h-full text-center space-y-6"
+  >
+    <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+      <Bot size={32} className="text-white" />
+    </div>
+    <div>
+      <h2 className="text-2xl font-bold text-white">AI Assistant Ready</h2>
+      <p className="text-gray-400 max-w-md mt-2">
+        I've analyzed your document. What would you like to know?
+      </p>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl w-full pt-4">
+      {[
+        "What is the main purpose of this document?",
+        "Summarize the key findings.",
+        "Who is the intended audience?",
+        "Are there any action items for me?",
+      ].map((text, i) => (
+        <motion.button
+          key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.1 + 0.3 }}
+          onClick={() => setInput(text)}
+          className="p-3 text-left text-sm text-gray-300 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-lg transition-colors"
+        >
+          {text}
+        </motion.button>
+      ))}
+    </div>
+  </motion.div>
+);
+
+const ChatMessage = ({ message }: { message: Message }) => {
+  const isUser = message.role === 'user';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={cn("flex items-start gap-3", isUser && "justify-end")}
+    >
+      {!isUser && (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center flex-shrink-0">
+          <Bot size={18} />
+        </div>
+      )}
+      <MagicCard
+        className={cn(
+          "max-w-2xl",
+          isUser ? "bg-blue-600 text-white rounded-br-none" : "bg-gray-800 text-gray-200 rounded-bl-none border-gray-700"
+        )}
+      >
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+      </MagicCard>
+      {isUser && (
+        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <User size={18} />
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+const LoadingIndicator = () => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start gap-3"
+    >
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center flex-shrink-0">
+          <Bot size={18} />
+        </div>
+        <MagicCard className="bg-gray-800 text-gray-200 rounded-bl-none border-gray-700">
+            <div className="flex items-center gap-2">
+                <motion.div
+                    className="w-2 h-2 bg-green-400 rounded-full"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                />
+                <motion.div
+                    className="w-2 h-2 bg-green-400 rounded-full"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                />
+                <motion.div
+                    className="w-2 h-2 bg-green-400 rounded-full"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                />
+            </div>
+      </MagicCard>
+    </motion.div>
+);

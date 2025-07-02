@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import FileUpload from '@/components/FileUpload';
 import ChatInterface from '@/components/ChatInterface';
+import { FileUploader } from '@/components/FileUpload';
 
 export default function Home() {
   const [uploadStatus, setUploadStatus] = useState<{
@@ -68,7 +68,7 @@ export default function Home() {
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="w-full max-w-2xl"
               >
-                <FileUpload
+                <FileUploader
                   onUploadSuccess={handleUploadSuccess}
                   onUploadError={handleUploadError}
                 />
