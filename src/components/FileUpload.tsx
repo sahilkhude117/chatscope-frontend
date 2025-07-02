@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef } from 'react';
 
 interface FileUploadProps {
   onUploadSuccess: (message: string, fileName?: string) => void;
@@ -11,6 +10,7 @@ interface FileUploadProps {
 export default function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -20,6 +20,7 @@ export default function FileUpload({ onUploadSuccess, onUploadError }: FileUploa
     }
 
     setUploading(true);
+    setFiles([file]);
 
     try {
       const formData = new FormData();
@@ -44,7 +45,13 @@ export default function FileUpload({ onUploadSuccess, onUploadError }: FileUploa
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (uploadedFiles: File[]) => {
+    if (uploadedFiles.length > 0) {
+      handleFile(uploadedFiles[0]);
+    }
+  };
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     await handleFile(file);
@@ -76,152 +83,143 @@ export default function FileUpload({ onUploadSuccess, onUploadError }: FileUploa
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className="relative"
-    >
+    <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 rounded-lg">
       <input
         ref={inputRef}
         type="file"
         accept=".pdf"
-        onChange={handleFileUpload}
+        onChange={handleInputChange}
         disabled={uploading}
         className="hidden"
       />
       
-      <motion.div
-        className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer ${
+      <div
+        className={`relative w-full h-full min-h-96 flex flex-col items-center justify-center p-8 cursor-pointer transition-colors ${
           dragActive
-            ? 'border-green-400 bg-green-400/5 scale-105'
+            ? 'bg-neutral-100 dark:bg-neutral-900'
             : uploading
-            ? 'border-gray-600 bg-gray-900/50'
-            : 'border-gray-700 bg-gray-900/30 hover:border-green-400/50 hover:bg-green-400/5'
+            ? 'bg-neutral-50 dark:bg-neutral-950'
+            : 'hover:bg-neutral-50 dark:hover:bg-neutral-900'
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={!uploading ? openFileExplorer : undefined}
-        whileHover={!uploading ? { scale: 1.02 } : {}}
-        whileTap={!uploading ? { scale: 0.98 } : {}}
       >
-        {/* Background gradient effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-600/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        
-        <div className="relative z-10 flex flex-col items-center space-y-6">
-          <motion.div
-            animate={uploading ? { rotate: 360 } : { rotate: 0 }}
-            transition={uploading ? { duration: 2, repeat: Infinity, ease: "linear" } : {}}
-            className={`w-20 h-20 rounded-full flex items-center justify-center ${
-              uploading 
-                ? 'bg-green-400/20 border-2 border-green-400/30' 
-                : 'bg-gradient-to-br from-green-400 to-emerald-600'
-            }`}
-          >
-            {uploading ? (
-              <div className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-            )}
-          </motion.div>
+        <div className="flex flex-col items-center justify-center space-y-4">
+          {uploading ? (
+            <div className="w-12 h-12 border-4 border-neutral-300 dark:border-neutral-600 border-t-neutral-600 dark:border-t-neutral-300 rounded-full animate-spin" />
+          ) : (
+            <svg
+              className="w-12 h-12 text-neutral-400 dark:text-neutral-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          )}
 
-          <div className="space-y-2">
-            <h3 className="text-2xl font-semibold text-white">
-              {uploading ? 'Processing your PDF...' : dragActive ? 'Drop your PDF here' : 'Upload your PDF document'}
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">
+              {uploading
+                ? 'Processing your PDF...'
+                : dragActive
+                ? 'Drop your PDF here'
+                : 'Upload your PDF document'}
             </h3>
-            <p className="text-gray-400 max-w-md mx-auto">
-              {uploading 
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {uploading
                 ? 'Please wait while we process your document'
-                : 'Drag and drop your PDF file here, or click to browse'
-              }
+                : 'Drag and drop your PDF file here, or click to browse'}
             </p>
           </div>
 
-          {!uploading && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-3 bg-gradient-to-r from-green-400 to-emerald-600 text-white font-medium rounded-xl hover:from-green-500 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-green-400/25"
-            >
-              Choose File
-            </motion.button>
-          )}
-
           {uploading && (
-            <div className="flex items-center space-x-2 text-green-400">
+            <div className="flex items-center space-x-2 text-neutral-600 dark:text-neutral-400">
               <div className="flex space-x-1">
-                <motion.div
-                  className="w-2 h-2 bg-green-400 rounded-full"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 1, repeat: Infinity, delay: 0 }}
-                />
-                <motion.div
-                  className="w-2 h-2 bg-green-400 rounded-full"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
-                />
-                <motion.div
-                  className="w-2 h-2 bg-green-400 rounded-full"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
-                />
+                <div className="w-2 h-2 bg-neutral-400 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-neutral-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 bg-neutral-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
               </div>
               <span className="text-sm">Analyzing document...</span>
             </div>
           )}
+
+          {files.length > 0 && !uploading && (
+            <div className="mt-4 p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+              <p className="text-sm text-neutral-700 dark:text-neutral-300">
+                Selected: {files[0].name}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Animated border effect */}
-        {dragActive && (
-          <motion.div
-            className="absolute inset-0 border-2 border-green-400 rounded-2xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{
-              background: 'linear-gradient(45deg, transparent 30%, rgba(34, 197, 94, 0.1) 50%, transparent 70%)',
-              backgroundSize: '200% 200%',
-              animation: 'gradient-shift 2s ease infinite',
-            }}
-          />
-        )}
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-        className="mt-6 text-center space-y-2"
-      >
-        <p className="text-sm text-gray-500">
-          Supported format: PDF • Max file size: 10MB
-        </p>
-        <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
-          <div className="flex items-center space-x-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-            <span>Secure upload</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span>AI-powered processing</span>
+        <div className="absolute bottom-4 left-0 right-0 text-center space-y-2">
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+            Supported format: PDF • Max file size: 10MB
+          </p>
+          <div className="flex items-center justify-center space-x-4 text-xs text-neutral-400 dark:text-neutral-500">
+            <div className="flex items-center space-x-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              <span>Secure upload</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>AI-powered processing</span>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
+    </div>
+  );
+}
 
-      <style jsx>{`
-        @keyframes gradient-shift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
-    </motion.div>
+// Demo component to show usage
+export function FileUploadDemo() {
+  const [uploadMessage, setUploadMessage] = useState<string>('');
+  const [error, setError] = useState<string>('');
+
+  const handleUploadSuccess = (message: string, fileName?: string) => {
+    setUploadMessage(`Success: ${message} ${fileName ? `(${fileName})` : ''}`);
+    setError('');
+    console.log('Upload successful:', message, fileName);
+  };
+
+  const handleUploadError = (errorMessage: string) => {
+    setError(errorMessage);
+    setUploadMessage('');
+    console.error('Upload error:', errorMessage);
+  };
+
+  return (
+    <div className="w-full max-w-4xl mx-auto p-4 space-y-4">
+      <FileUpload
+        onUploadSuccess={handleUploadSuccess}
+        onUploadError={handleUploadError}
+      />
+      
+      {uploadMessage && (
+        <div className="p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">
+          {uploadMessage}
+        </div>
+      )}
+      
+      {error && (
+        <div className="p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
