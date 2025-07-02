@@ -1,30 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
+import { NextRequest, NextResponse } from 'next/server';
+import { queryDocuments } from '@/lib/rag-query';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId } = await request.json()
+    const { message } = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: message, session_id: sessionId }),
-    })
-
-    if (!response.ok) {
-      throw new Error('Backend request failed')
+    if (!message) {
+      return NextResponse.json({ error: 'No message provided' }, { status: 400 });
     }
 
-    const data = await response.json()
-    return NextResponse.json({ response: data.answer })
+    const response = await queryDocuments(message);
+
+    return NextResponse.json({ response });
   } catch (error) {
-    console.error('Chat API error:', error)
+    console.error('Chat error:', error);
     return NextResponse.json(
-      { error: 'Failed to process message' },
+      { error: 'Failed to process chat message' },
       { status: 500 }
-    )
+    );
   }
 }

@@ -9,21 +9,33 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@langchain/openai": "^0.5.16",
+    "@langchain/pinecone": "^0.2.0",
+    "@pinecone-database/pinecone": "^6.1.1",
+    "@types/multer": "^2.0.0",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.10.0",
+    "langchain": "^0.3.29",
     "lucide-react": "^0.525.0",
+    "multer": "^2.0.1",
     "next": "15.3.4",
+    "openai": "^5.8.2",
+    "pdf-parse": "^1.1.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "pnpm@10.5.0+sha512.11106a5916c7406fe4b8cb8e3067974b8728f47308a4f5ac5e850304afa6f57e2847d7950dfe78877d8d36bfb401d381c4215db3a4c3547ffa63c14333a6fa51"
 }

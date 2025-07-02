@@ -1,35 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
+import { NextRequest, NextResponse } from 'next/server';
+import { processPDF } from '@/lib/pdf-processor';
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const backendFormData = new FormData()
-    backendFormData.append('file', file)
-
-    const response = await fetch(`${BACKEND_URL}/upload`, {
-      method: 'POST',
-      body: backendFormData,
-    })
-
-    if (!response.ok) {
-      throw new Error('Backend upload failed')
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json({ error: 'Please upload a PDF file' }, { status: 400 });
     }
 
-    const data = await response.json()
-    return NextResponse.json(data)
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const result = await processPDF(buffer, file.name);
+
+    return NextResponse.json({ message: result });
   } catch (error) {
-    console.error('Upload API error:', error)
+    console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: 'Failed to process PDF' },
       { status: 500 }
-    )
+    );
   }
 }
